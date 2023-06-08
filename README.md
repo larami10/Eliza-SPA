@@ -21,6 +21,7 @@ A simple attempt to recreate Eliza as a Single Page Application with the followi
 > **_NOTE:_** Eliza was Alexa before Alexa. For more information, please check out the following links:
 
 [Eliza, the Rogerian Therapist](http://psych.fullerton.edu/mbirnbaum/psych101/Eliza.htm)
+
 [Eliza on Wikipedia](https://en.wikipedia.org/wiki/ELIZA)
 
 ## How to use the Project
