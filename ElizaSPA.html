@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Eliza Activity 3</title>
+        <link rel="stylesheet" href="styles.css">
+        <script src="./dictionary.json"></script>
+        <script>
+            // min, max, random will help find a random number
+            var min = Math.ceil(0);
+            var max;
+            var random;
+            
+            // keep track of name
+            var name;
+            
+            // keep track of previous question and answer
+            var previousQuestion = '';
+            var previousAnswer = '';
+            
+            // list is used to keep track of conversation
+            var list = [];
+            
+            // alertList is an array of alert options
+            var alertList = ["I'm waiting here!", "Whatsa matter, cat got your tongue?", "Are you even listening to me?", "Are we going to chat? I can't help you without a dialog"];
+            
+            // set window timeout for 20 seconds
+            var timeout = window.setTimeout(alertFunction, 20000);
+
+            /* alertFunction will trigger the alert dialog box
+             * with a random message.
+             */
+            function alertFunction() {
+                // set max to alertList length
+                max = Math.floor(alertList.length);
+                
+                // set random to a random integer
+                random = Math.floor(Math.random() * (max - min) + min);
+
+                // set alertMessage to random message
+                var alertMessage = alertList[random];
+                
+                // call alert() displaying random alertMessage
+                alert(alertMessage);
+            }
+
+            /* converse() will be called after the client has provided their name to 
+             * Eliza. converse() will take a message and send it to elizaResponse()
+             * to parse the message and create an appropriate response for the client
+             * to see and respond to. If "/clear" is requested, the client will be
+             * removed from localStorage. If "/search" is requested, the requested
+             * key will be used to return the last string the client inputed and return
+             * it to the input box; else the input box will turn blank. If Eliza's
+             * response matches the previous response, Eliza will search for a new
+             * random response.
+             */
+            function converse() {
+                // clear the previous timeout
+                window.clearTimeout(timeout);
+                
+                // reset timeout
+                timeout = window.setTimeout(alertFunction, 20000);
+                
+                // read dictionary.json
+                const data = readFile();
+
+                // get the "form" label value
+                var message = document.getElementsByName("msg")[0].value;
+                
+                // if client requests /clear
+                if(message === "/clear") {
+                    // remove current client from localstorage
+                    localStorage.removeItem(name);
+                    
+                    // set list to empty
+                    list = [];
+                    
+                    // reset the button to starting position
+                    document.getElementById("button").setAttribute("onclick", "updateMsg()");
+                    
+                    // set the "form" label value to empty
+                    document.getElementById('msg').value = "";
+                    
+                    // restart eliza
+                    start();
+                // else if client requests /search
+                } else if(message.includes("/search")) {
+                    // call search(message)
+                    search(message);
+                // else
+                } else {
+                    // retrieve appropriate response
+                    var response = elizaResponse(data, message);
+
+                    // if appropriate response can't be found
+                    if(response.length === 0) {
+                        // set response to appropriate "no input found" response
+                        response = elizaResponse(data, "noInput");
+                    // else if a response does exist
+                    } else if(response.length > 0) {
+                        // set a checkResponse boolean variable
+                        var checkResponse = false;
+                        
+                        // while checkResponse is false
+                        while(checkResponse === false) {
+                            // if new response matches the previous response
+                            if(response[0] === previousAnswer || response[1] === previousQuestion) {
+                                // get a new response
+                                response = elizaResponse(data, message);
+                            // else set checkResponse to true to exit while loop
+                            } else {
+                                checkResponse = true;
+                            }
+                        }
+                    }
+
+                    // set answer and question from response
+                    var answer = response[0];
+                    var question = response[1];
+                
+                    // set previous question and answer to the new response values
+                    previousAnswer = answer;
+                    previousQuestion = question;
+
+                    // set first letter of question to lowercase
+                    question = question.charAt(0).toLowerCase() + question.slice(1);
+
+                    // set client's response
+                    list.push("<br><br>[" + name + "]: " + message);
+                
+                    // set Eliza's answer and question
+                    list.push("<br><br>[Eliza]: " + answer + " " + name + ", " + question);
+
+                    // print conversation to browser
+                    printConversation();
+                }
+            }
+
+            /* readFile() will take a file, read the json
+             * file and return the data.entries.
+             */
+            function readFile() {
+                return data.entries;
+            }
+            
+            /* search() will take a key provided by the client and
+             * search backwards through the tracked list in order
+             * to return the last input string provided by the
+             * currect client.
+             */
+            function search(message) {
+                // slice the message to only retrieve the input key
+                message = message.slice(8);
+                
+                // set a temp variable that will hold the return string
+                var temp = '';
+                
+                // set a boolean variable to check status
+                var check = false;
+                
+                // traverse backwards through list
+                for(let i = list.length - 2; i > 0; i-=2) {
+                    // if key message is in string and check is false
+                    if(list[i].includes(message) && check === false) {
+                        // traverse through the string
+                        for(let j = 0; j < list[i].length; j++) {
+                            // if first space character is reached, set check to true
+                            if(list[i][j] === ' ') {
+                                check = true;
+                            }
+                            
+                            // if check is true, add the rest of the string to temp
+                            if(check === true) {
+                                temp+= list[i][j];
+                            }
+                        }
+                    }
+                }
+                
+                // if temp is not blank
+                if(temp !== '') {
+                    // return temp slicing off the space at temp[0]
+                    document.getElementById('msg').value = temp.slice(1);
+                // else
+                } else {
+                    // return a blank value
+                    document.getElementById('msg').value = '';
+                }
+            }
+
+            /* start() is called onload which will display
+             * Eliza's greeting and first question to the
+             * client.
+             */
+            function start() {
+                // add Eliza's message to list
+                list.push("[Eliza]: Hello, I am Eliza! What is your name?");
+                
+                // Display Eliza's message in the conversation Id
+                document.getElementById('conversation').innerHTML = list[0];
+            }
+
+            /* noName() will be called when the client provides
+             * an empty string for their name and Eliza will
+             * provide an appropriate response.
+             */
+            function noName(message) {
+                // read dictionary.json
+                const data = readFile();
+
+                // get appropriate response to an empty name
+                var response = elizaResponse(data, "noName");
+
+                // add client's empty response to list
+                list.push("<br><br>[Client]: ");
+                
+                // add Eliza's response to list
+                list.push("<br><br>[Eliza]: " + response[0] + " " + response[1]);
+
+                // print conversation to browser
+                printConversation();
+            }
+
+            /* updateMsg() will retrieve the client's name and either call noName() to
+             * provide a response to an empty string or search for the client's name in
+             * the localStorage. If the client's name is not currently in localStorage,
+             * the alertList will be updated to include the client's name to set Eliza's
+             * future messages to include the client's name and call printConversation()
+             * to add the client to localStorage.
+             */
+            function updateMsg() {
+                // clear the previout timeout
+                window.clearTimeout(timeout);
+                
+                // reset timeout to 20 seconds
+                timeout = window.setTimeout(alertFunction, 20000);
+                 
+                // retrieve the client's name
+                name = document.getElementsByName("msg")[0].value;
+               
+                // if client's name is in localStorage
+                if(localStorage.getItem(name) !== null) {
+                    // set the list to empty
+                    list = [];
+                    
+                    // traverse through client's messages
+                    for(let i = 0; i < JSON.parse(localStorage.getItem(name)).length; i++) {
+                        // add each of the client's and Eliza's messages to list
+                        list.push(JSON.parse(localStorage.getItem(name))[i]);
+                    }
+                    
+                    // print client's last conversation
+                    printConversation();
+                    
+                    // set the button to call converse() for Eliza to continue last conversation
+                    document.getElementById("button").setAttribute("onclick", "converse()");
+                // else
+                } else {
+                    // if client provided an empty string for name
+                    if(name === "") {
+                        // call noName
+                        noName();
+                    // else
+                    } else {
+                        // add client's name to list
+                        list.push("<br><br>[" + name + "]: " + name);
+
+                        // update alertList to include client's name
+                        alertList[0] = name + ", I'm waiting here!";
+                        alertList[1] = "Whatsa matter " + name + ", cat got your tongue?";
+                        alertList[2] = "Are you even listening to me " + name + "?";
+
+                        // add Eliza's response to list
+                        list.push("<br><br>[Eliza]: " + name + "! how is your day going?");
+                    
+                        // print conversation to browser
+                        printConversation();
+                   
+                        // set the onclick button method to converse()
+                        document.getElementById("button").setAttribute("onclick", "converse()");
+                    }
+                }
+            }
+
+            /* printConversation() will print the conversation
+             * to the browser and autoscroll to the bottom if
+             * needed. printConversation() will also add the
+             * client's name to localStorage if the input name
+             * is not blank.
+             */
+            function printConversation() {
+                // print the first line of the conversation
+                document.getElementById('conversation').innerHTML = list[0];
+
+                // print the lines that follow
+                for(let i = 1; i < list.length; i++) {
+                    document.getElementById('conversation').innerHTML += list[i];
+                }
+
+                // set the "form" label value to empty
+                document.getElementById('msg').value = "";
+                
+                // if name exists
+                if(name !== "") {
+                    // add client and their list to localStorage
+                    localStorage.setItem(name, JSON.stringify(list));
+                }
+                
+                // auto scroll to the bottom of the page
+                scrollTo(0, document.body.scrollHeight);
+            }
+
+            /* elizaResponse() will try to match a message
+             * to one of the data.entries keys to find a
+             * random/appropriate message to respond to the
+             * client with. An array arr with Eliza's answer
+             * and question will be returned.
+             */
+            function elizaResponse(data, message) {
+                // arr will hold Eliza's answer and question
+                var arr = [];
+                
+                // traverse through all entries
+                for(let i = 0; i < data.length; i++) {
+                    // traverse through all keys
+                    for(let j = 0; j < data[i].key.length; j++) {
+                        // if a message matches a key
+                        if(message.includes(data[i].key[j])) {
+                            // set max to answer's length
+                            max = Math.floor(data[i].answer.length);
+                            
+                            // generate a random integer
+                            random = Math.floor(Math.random() * (max - min) + min);
+
+                            // add random answer to arr
+                            arr.push(data[i].answer[random]);
+
+                            // set max to question's length
+                            max = Math.floor(data[i].question.length);
+
+                            // generate a random integer
+                            random = Math.floor(Math.random() * (max - min) + min);
+
+                            // add random question to arr
+                            arr.push(data[i].question[random]);
+                        }
+                    }
+                }
+                // return arr
+                return arr;
+            }
+        </script>
+    </head>
+    <body onload="start()">
+        <p id="conversation"></p>
+        <input type="text" name="msg" id="msg" size="50">
+        <button type="button" onclick="updateMsg()" id="button">Send</button>
+    </body>
+</html>
